@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import FastAPI, Response, status, Body
+from fastapi import FastAPI, Response, status, Body, HTTPException
 from pydantic import BaseModel
 import database
 import os
@@ -31,48 +31,54 @@ def post_new_post(new_post: Post):
     return {"Your message" : new_post}
 
 @app.get("/posts")
-def send_all_posts(response: Response = status.HTTP_200_OK):
+def send_all_posts():
     if os.path.exists("posts.db"):
         posts_list = database.get_all_posts()
         if not posts_list:
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return {"Message" : "Database is empty"}
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="Database is empty")
+            #response.status_code = status.HTTP_404_NOT_FOUND
+            #return {"Message" : "Database is empty"}
         posts_dict = database.convert_to_json(posts_list)
         return {"All posts" : posts_dict}
     else:
-        response.status_code = status.HTTP_404_NOT_FOUND
-        return {"Message" : "There is no database yet"}
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="There is no database yet")
 
 @app.get("/posts/{id}")
-def send_post_by_id(id: int, response: Response = status.HTTP_200_OK):
+def send_post_by_id(id: int):
     if os.path.exists("posts.db"):
         post_list = database.get_post_by_id(id)
         post_dict = database.convert_to_json(post_list)
         if post_dict:
             return {f"Post #{id}" : post_dict}
         else:
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return {"Error" : "There is no such post"}
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="There is no such post")
     else: 
-        response.status_code = status.HTTP_404_NOT_FOUND
-        return {"Message" : "No database at the moment"}
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="There is no database yet")
     
 @app.put("/posts/{id}")
-def update_post_by_id(id: int, updated_post: Post, response: Response = status.HTTP_200_OK):
+def update_post_by_id(id: int, updated_post: Post):
     if os.path.exists("posts.db"):
         if database.update_post_by_id(id, updated_post):
             return {"Message" : "Your post has been updated successfully"}
         else:
-            response.status_code = 404
-            return {"Error" : "There is no such post"}
-    else: return {"Message" : "No database at the moment"}
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="There is no such post")
+    else: 
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="There is no database yet")
 
 @app.delete("/posts/{id}")
-def delete_post_by_id(id: int, response: Response = status.HTTP_200_OK):
+def delete_post_by_id(id: int):
     if os.path.exists("posts.db"):
         if database.delete_post_by_id(id):
             return {"Message" : "Your post has been deleted successfully"}
         else:
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return {"Error" : "There is no such post"}
-    else: return {"Message" : "No database at the moment"}
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="There is no such post")
+    else: 
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="There is no database yet")
