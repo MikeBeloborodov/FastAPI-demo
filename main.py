@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import FastAPI, Body
+from fastapi import FastAPI, Response, status, Body
 from pydantic import BaseModel
 import database
 import os
@@ -31,49 +31,48 @@ def post_new_post(new_post: Post):
     return {"Your message" : new_post}
 
 @app.get("/posts")
-def send_all_posts():
+def send_all_posts(response: Response = status.HTTP_200_OK):
     if os.path.exists("posts.db"):
         posts_list = database.get_all_posts()
+        if not posts_list:
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return {"Message" : "Database is empty"}
         posts_dict = database.convert_to_json(posts_list)
-    return {"All posts" : posts_dict}
+        return {"All posts" : posts_dict}
+    else:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"Message" : "There is no database yet"}
 
 @app.get("/posts/{id}")
-def send_post_by_id(id):
-    try:
-        int(id)
-        if os.path.exists("posts.db"):
-            post_list = database.get_post_by_id(id)
-            post_dict = database.convert_to_json(post_list)
-            if post_dict:
-                return {f"Post #{id}" : post_dict}
-            else:
-                return {"Error" : "There is no such post"}
-        else: return {"Message" : "No database at the moment"}
-    except:
-        return {"Error" : "Post id must be an integer"}
+def send_post_by_id(id: int, response: Response = status.HTTP_200_OK):
+    if os.path.exists("posts.db"):
+        post_list = database.get_post_by_id(id)
+        post_dict = database.convert_to_json(post_list)
+        if post_dict:
+            return {f"Post #{id}" : post_dict}
+        else:
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return {"Error" : "There is no such post"}
+    else: 
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"Message" : "No database at the moment"}
     
 @app.put("/posts/{id}")
-def update_post_by_id(id, updated_post: Post):
-    try:
-        int(id)
-        if os.path.exists("posts.db"):
-            if database.update_post_by_id(id, updated_post):
-                return {"Message" : "Your post has been updated successfully"}
-            else:
-                return {"Error" : "There is no such post"}
-        else: return {"Message" : "No database at the moment"}
-    except:
-        return {"Error" : "Post id must be an integer"}
+def update_post_by_id(id: int, updated_post: Post, response: Response = status.HTTP_200_OK):
+    if os.path.exists("posts.db"):
+        if database.update_post_by_id(id, updated_post):
+            return {"Message" : "Your post has been updated successfully"}
+        else:
+            response.status_code = 404
+            return {"Error" : "There is no such post"}
+    else: return {"Message" : "No database at the moment"}
 
 @app.delete("/posts/{id}")
-def delete_post_by_id(id):
-    try:
-        int(id)
-        if os.path.exists("posts.db"):
-            if database.delete_post_by_id(id):
-                return {"Message" : "Your post has been deleted successfully"}
-            else:
-                return {"Error" : "There is no such post"}
-        else: return {"Message" : "No database at the moment"}
-    except:
-        return {"Error" : "Post id must be an integer"}
+def delete_post_by_id(id: int, response: Response = status.HTTP_200_OK):
+    if os.path.exists("posts.db"):
+        if database.delete_post_by_id(id):
+            return {"Message" : "Your post has been deleted successfully"}
+        else:
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return {"Error" : "There is no such post"}
+    else: return {"Message" : "No database at the moment"}
